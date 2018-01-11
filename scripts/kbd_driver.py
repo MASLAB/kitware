@@ -13,10 +13,10 @@ PADDING = 32
 BOX_SIZE = 64
 SCREEN_SIZE = BOX_SIZE * 3 + PADDING * 2
 KEY_SPEEDS = {
-    pygame.K_w: (0.75, 0.75),
-    pygame.K_a: (-0.25, 0.25),
-    pygame.K_s: (-0.75, -0.75),
-    pygame.K_d: (0.25, -0.25)
+    pygame.K_w: (0.60, 0.60),
+    pygame.K_a: (-0.40, 0.40),
+    pygame.K_s: (-0.60, -0.60),
+    pygame.K_d: (0.40, -0.40)
 }
 BOX_OFFSETS = {
     pygame.K_w: (0, -1),
