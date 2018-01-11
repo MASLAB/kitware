@@ -9,6 +9,7 @@ ROS example code for the kitbot (MASLAB 2018)
 ## Setup
 1. Clone into the `src` directory of your Catkin workspace for ROS
 2. Run `catkin_make` from the workspace folder
+3. Make sure you have the `pygame` package: `pip install pygame`
 
 ## Running
 
