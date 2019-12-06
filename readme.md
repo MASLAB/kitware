@@ -1,9 +1,8 @@
 # Kitware
 
-ROS example code for the kitbot (MASLAB 2018)
+ROS example code for the kitbot (MASLAB 2020)
 
 * Controls 2 Kitbot drive motors with WASD keys
-* Publishes 3 IR sensor raw measurements onto a ROS topic
 * Visualize data with rqt perspective
 
 ## Setup

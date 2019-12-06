@@ -12,18 +12,12 @@ class KitBot(ROSSketch):
     # PIN MAPPINGS
     LMOTOR_PINS = (2, 3)  # DIR, PWM
     RMOTOR_PINS = (4, 5)  # DIR, PWM
-    IR_PINS = [14, 15, 16]
 
     def setup(self):
         """One-time method that sets up the robot, like in Arduino"""
-        # Create the motor and short IR objects
+        # Create the motor objects
         self.lmotor = Motor(self.tamp, *self.LMOTOR_PINS)
         self.rmotor = Motor(self.tamp, *self.RMOTOR_PINS)
-        self.irs = [AnalogInput(self.tamp, p) for p in self.IR_PINS]
-
-        # Create a publisher to publish short IR sensor readings
-        self.ir_pub = rospy.Publisher(
-            'ir_read', kitware.msg.IRRead, queue_size=10)
 
         # Create a subscriber to listen for drive motor commands
         self.drive_sub = rospy.Subscriber(
@@ -31,11 +25,7 @@ class KitBot(ROSSketch):
 
     def loop(self):
         """Method that loops at a fast rate, like in Arduino"""
-        # Create an IR read message containing the short IR analog values
-        ir_msg = kitware.msg.IRRead()
-        ir_msg.data = [ir.val for ir in self.irs]
-        # Publish the IR readings
-        self.ir_pub.publish(ir_msg)
+        pass
 
     def speed_to_dir_pwm(self, speed):
         """Converts floating point speed (-1.0 to 1.0) to dir and pwm values"""
