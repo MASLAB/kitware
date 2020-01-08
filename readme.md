@@ -1,5 +1,7 @@
 # Kitware
 
+**Note: ** To clone this repo directly onto your NUC, use this repo: https://github.com/nmoroze/kitware
+
 ROS example code for the kitbot (MASLAB 2020)
 
 * Controls 2 Kitbot drive motors with WASD keys
