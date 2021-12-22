@@ -1,13 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import rospy
-import kitware.msg
-from tamproxy import ROSSketch
+import rclpy
+from kitware.msg import DriveCmd
+from tamproxy import ROS2Sketch
 from tamproxy.devices import AnalogInput, Motor
 
 
-class KitBot(ROSSketch):
-    """ROS Node that controls the KitBod via the Teensy and tamproxy"""
+class KitBotNode(ROS2Sketch):
+    """ROS2 Node that controls the KitBot via the Teensy and tamproxy"""
 
     # PIN MAPPINGS
     LMOTOR_PINS = (2, 3)  # DIR, PWM
@@ -20,8 +20,11 @@ class KitBot(ROSSketch):
         self.rmotor = Motor(self.tamp, *self.RMOTOR_PINS)
 
         # Create a subscriber to listen for drive motor commands
-        self.drive_sub = rospy.Subscriber(
-            'drive_cmd', kitware.msg.DriveCMD, self.drive_callback)
+        self.drive_sub = self.create_subscription(
+            DriveCmd,
+            'drive_cmd',
+            self.drive_callback)
+        self.drive_sub  # prevent unused variable warning
 
     def loop(self):
         """Method that loops at a fast rate, like in Arduino"""
@@ -39,5 +42,5 @@ class KitBot(ROSSketch):
 
 
 if __name__ == '__main__':
-    kb = KitBot(rate=100)  # Run at 100Hz (10ms loop)
+    kb = KitBotNode(rate=100)  # Run at 100Hz (10ms loop)
     kb.run()
