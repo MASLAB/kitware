@@ -73,7 +73,7 @@ def calculate_drive_speed(screen, surface):
 
 class KeyboardDriverNode(Node):
     def __init__(self):
-        super().__init__('minimal_publisher')
+        super().__init__('keyboard_driver')
         self.screen, self.surface = pygame_setup()
         self.drive_command_publisher = self.create_publisher(
                 DriveCmd,

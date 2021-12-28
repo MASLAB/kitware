@@ -9,6 +9,8 @@ ROS2 example code for the kitbot (MASLAB 2022)
 1. Clone into the `src` directory of your Catkin workspace for ROS
 2. Run `colcon build` from the workspace folder
 3. Make sure you have the `pygame` package: `pip3 install pygame`
+4. Make sure you have TAMProxy-Firmware running on a teensy 
+5. Add the TAMProxy-pyHost folder to your `PYTHONPATH`
 
 ## Running
 
