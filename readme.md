@@ -19,7 +19,7 @@ ROS2 example code for the kitbot (MASLAB 2022)
 * Launch the keyboard driver node: `ros2 run kitware kbd_driver.py`
 
 ### Using roslaunch
-* `ros2 launch kitware kitware.launch`
+* `ros2 launch kitware kitware_launch.py`
 
 ### Using rqt
 * Launch rqt: `rqt`
