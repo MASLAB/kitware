@@ -1,7 +1,0 @@
-<launch>
-
-  <include file="$(find ydlidar)/launch/lidar_view.launch" />
-  <node pkg="kitware" name="kitbot" type="kitbot.py" />
-  <node pkg="kitware" name="kbd_driver" type="kbd_driver.py" />
-
-</launch>

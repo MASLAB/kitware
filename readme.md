@@ -1,28 +1,28 @@
 # Kitware
 
-ROS example code for the kitbot (MASLAB 2020)
+ROS2 example code for the kitbot (MASLAB 2022)
 
 * Controls 2 Kitbot drive motors with WASD keys
 * Visualize data with rqt perspective
 
 ## Setup
-1. Clone into the `src` directory of your Catkin workspace for ROS
-2. Run `catkin_make` from the workspace folder
-3. Make sure you have the `pygame` package: `pip install pygame`
+1. Clone into the `src` directory of your colcon workspace for ROS
+2. Run `colcon build` from the workspace folder
+3. Make sure you have the `pygame` package: `pip3 install pygame`
+4. Make sure you have TAMProxy-Firmware running on a teensy 
+5. Add the TAMProxy-pyHost folder to your `PYTHONPATH`
 
 ## Running
 
-### Step 0: Ensure roscore is running
-`roscore`
-
 ### Using rosrun
-* Launch the kitbot node: `rosrun kitware kitbot.py`
-* Launch the keyboard driver node: `rosrun kitware kbd_driver.py`
+* Launch the kitbot node: `ros2 run kitware kitbot.py`
+* Launch the keyboard driver node: `ros2 run kitware kbd_driver.py`
 
 ### Using roslaunch
-* `roslaunch kitware kitware.launch`
+* `ros2 launch kitware kitware_launch.py`
 
-### Using rqt
+## Using rqt
+* Launch both the kitbot and keyboard driver nodes.
 * Launch rqt: `rqt`
 * From the perspectives menu, select "import perspective" and select the `kitware.perspective` file in the root of this repo.
-* At the bottom, click the ROS Launch GUI. Start both the `kitbot.py` and `kbd_driver.py` nodes
+* Here you can visualize the values sent in the `/drive_cmd` topic and see a graph of the nodes and topics.
