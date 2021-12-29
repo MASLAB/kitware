@@ -21,7 +21,8 @@ ROS2 example code for the kitbot (MASLAB 2022)
 ### Using roslaunch
 * `ros2 launch kitware kitware_launch.py`
 
-### Using rqt
+## Using rqt
+* Launch both the kitbot and keyboard driver nodes.
 * Launch rqt: `rqt`
 * From the perspectives menu, select "import perspective" and select the `kitware.perspective` file in the root of this repo.
-* At the bottom, click the ROS Launch GUI. Start both the `kitbot.py` and `kbd_driver.py` nodes
+* Here you can visualize the values sent in the `/drive_cmd` topic and see a graph of the nodes and topics.
