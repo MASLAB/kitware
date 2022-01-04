@@ -8,11 +8,15 @@ ROS2 example code for the kitbot (MASLAB 2022)
 ## Setup
 1. Clone into the `src` directory of your colcon workspace for ROS
 2. Run `colcon build` from the workspace folder
-3. Make sure you have the `pygame` package: `pip3 install pygame`
-4. Make sure you have TAMProxy-Firmware running on a teensy 
-5. Add the TAMProxy-pyHost folder to your `PYTHONPATH`
+
+The following steps should already be done on the hardware we give students.
+1. Make sure you have the `pygame` package: `pip3 install pygame`
+2. Make sure you have TAMProxy-Firmware running on a teensy
+3. Add the TAMProxy-pyHost folder to your `PYTHONPATH`
 
 ## Running
+
+Run `. install/local_setup.bash` to setup your environment to use the built packages
 
 ### Using rosrun
 * Launch the kitbot node: `ros2 run kitware kitbot.py`
