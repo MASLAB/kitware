@@ -48,7 +48,7 @@ class KitBotNode(ROS2Sketch):
     def speed_to_dir_pwm(self, speed):
         """Converts floating point speed (-1.0 to 1.0) to dir and pwm values"""
         speed = max(min(speed, 1), -1)
-        return speed > 0, int(abs(speed * 255))
+        return int(abs(speed * 255))
 
     def drive_callback(self, msg):
         """Processes a new drive command and controls motors appropriately"""
@@ -61,19 +61,21 @@ class KitBotNode(ROS2Sketch):
         if msg.l_speed > 0: # forward
             self.INA1.write(False)
             self.INB1.write(True)
-        else # reverse
+
+        else: # reverse
             self.INA1.write(True)
             self.INB1.write(False)
 
         if msg.r_speed > 0:
             self.INA2.write(False)
             self.INB2.write(True)
-        else
+
+        else: # reverse
             self.INA2.write(True)
             self.INB2.write(False)
 
-        self.PWM1.write(*self.speed_to_dir_pwm(msg.l_speed)) # left motor
-        self.PWM2.write(*self.speed_to_dir_pwm(msg.r_speed)) # right motor
+        self.PWM1.write(self.speed_to_dir_pwm(msg.l_speed)) # left motor
+        self.PWM2.write(self.speed_to_dir_pwm(msg.r_speed)) # right motor
 
 if __name__ == '__main__':
     rclpy.init()
