@@ -28,6 +28,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
     msg/DriveCmd.msg
+    msg/EncoderRead.msg
 )
 
 #==========================================================#
@@ -51,6 +52,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   kitware/kbd_driver.py
   kitware/kitbot.py
+  kitware/drive_motor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

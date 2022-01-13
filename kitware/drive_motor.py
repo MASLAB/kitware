@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rclpy
-from kitware.msg import DriveCmd
+from kitware.msg import DriveCmd, EncoderRead
 from tamproxy import ROS2Sketch
 from tamproxy.devices import DigitalOutput, AnalogOutput, Encoder
 import math
@@ -40,6 +40,12 @@ class DriveMotorNode(ROS2Sketch):
             10)
         self.drive_sub  # prevent unused variable warning
 
+        # Create a publisher to publish encoder data
+        self.encoder_pub = self.create_publisher(
+            EncoderRead, # message interface
+            'encoder_read', # topic name
+            10) # queue length
+
         # create pin objects
         # left motor
         self.INA1 = DigitalOutput(self.tamp, self.INA1_PIN)
@@ -59,7 +65,7 @@ class DriveMotorNode(ROS2Sketch):
         speed = max(min(speed, 1), -1)
         return int(abs(speed * 255))
 
-    def count_to_rad(self, count)
+    def count_to_rad(self, count):
         """ Converts encoder counts to motor drive shaft angle in radians"""
         gear_ratio = 50
         counts_per_revolution = 64
@@ -68,17 +74,33 @@ class DriveMotorNode(ROS2Sketch):
 
     def stop_drive_motors(self):
         """Turn off motors when exiting ROS"""
-        self.PWM.write(self.speed_to_dir_pwm(0.0))
+        # JOHNZ: Add other actuators and motors
+        self.PWM1.write(self.speed_to_dir_pwm(0.0))
         self.INA1.write(False)
         self.INB1.write(False)
+        self.get_logger().info('Halt! Stopping the motors!')
+
+    def estimate_angular_velocity(self, current_angle_rad):
+        """Estimates the angular velocity given the current angle"""
+        # JOHNZ: Implement!
+        return 0.0
 
     def encoder_callback(self):
         """
-        Gets the current angle from the encoder
-        Estimates the motor angular velocity
-        Publishes data to the encoder_read topic
+        Get the current angle from the encoder
+        Estimate the motor angular velocity
+        Publish data to the encoder_read topic
         """
         self.current_angle_rad = self.count_to_rad(self.encoder_left.val)
+
+        # populate message
+        encoder_msg = EncoderRead()
+        encoder_msg.left_encoder_count = int(self.encoder.val)
+        encoder_msg.left_measured_angle_rad = self.current_angle_rad
+        encoder_msg.left_estimated_angular_velocity = self.estimate_angular_velocity(self.current_angle_rad)
+
+        # publish message
+        self.encoder_pub.publish(encoder_msg)
 
     def drive_callback(self, msg):
         """Processes a new drive command and controls motors appropriately"""
@@ -100,10 +122,12 @@ class DriveMotorNode(ROS2Sketch):
 if __name__ == '__main__':
     rclpy.init()
 
-    kb = DriveMotorNode(rate=100)  # Run at 100Hz (10ms loop)
-    kb.run_setup()     # Run tamproxy setup and code in setup() method
-    rclpy.spin(kb)
-
-    kb.destroy()       # Shuts down tamproxy
-    kb.destroy_node()  # Destroys the ROS node
-    rclpy.shutdown()
+    try:
+        kb = DriveMotorNode(rate=100)  # Run at 100Hz (10ms loop)
+        kb.run_setup()     # Run tamproxy setup and code in setup() method
+        rclpy.spin(kb)
+    except KeyboardInterrupt:
+        kb.stop_drive_motors()
+        kb.destroy()       # Shuts down tamproxy
+        kb.destroy_node()  # Destroys the ROS node
+        rclpy.shutdown()

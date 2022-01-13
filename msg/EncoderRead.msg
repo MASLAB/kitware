@@ -1,0 +1,3 @@
+int32 left_encoder_count
+float32 left_measured_angle_rad
+float32 left_estimated_angular_velocity
