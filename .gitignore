@@ -1,0 +1,6 @@
+build/
+install/
+kitware/__pycache__/
+kitware/build/
+kitware/log/
+log/
