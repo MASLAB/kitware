@@ -29,10 +29,9 @@ class PIDNode(ROS2Sketch):
     last_velocity = 0.0
     
     # PID signals
-    proportional_term = 0.0
-    integral_term = 0.0
-    derivative_term = 0.0
+    error = [0.0, 0.0, 0.0] # first index is most recent
     control_effort = 0.0
+    Ts = 0.001
     
     def setup(self):
         """
@@ -117,23 +116,20 @@ class PIDNode(ROS2Sketch):
         # update encoder
         self.encoder_callback()
 
-        position_error = msg.desired_position - self.current_position
+        self.error[0] = msg.desired_position - self.current_position
         
-        # antiwindup
-        self.integral_term = self.saturate(self.integral_term + msg.ki*position_error)
-
-        # derivative requires care
-        self.derivative_term = (1-msg.alpha)*self.derivative_term + msg.alpha*msg.kd*(self.current_position - self.last_position)
-        self.last_position = self.current_position
-
-        self.control_effort = msg.kp*(self.proportional_term + self.integral_term + self.derivative_term)
+        self.control_effort = self.control_effort + msg.kp*((1+self.Ts/msg.ti+msg.td/self.Ts)*self.error[0]
+            -(1+2*msg.td/self.Ts)*self.error[1]
+            +msg.td/self.Ts*self.error[2])
         self.control_effort = self.saturate(self.control_effort)
+
+        # update errors
+        self.error[1] = self.error[0]
+        self.error[2] = self.error[1]
 
         #self.get_logger().info('Speed: {}'.format(control_effort))
         pid_output_msg = PIDOutput()
         pid_output_msg.control_effort = float(self.control_effort)
-        pid_output_msg.integral_term = float(self.integral_term)
-        pid_output_msg.derivative_term = float(self.derivative_term)
         self.pid_output_pub.publish(pid_output_msg)
 
         if self.control_effort > 0: # forward
@@ -147,8 +143,7 @@ class PIDNode(ROS2Sketch):
 
     def estimate_velocity(self, position):
         alpha = 1
-        sample_rate = 1000
-        velocity = (1-alpha)*self.last_velocity + alpha*(position - self.last_position)*sample_rate
+        velocity = (1-alpha)*self.last_velocity + alpha*(position - self.last_position)*self.Ts
         self.last_velocity = velocity
         return velocity
 
