@@ -24,6 +24,9 @@ class DriveMotorNode(ROS2Sketch):
     ENC_VCC = 7
     ENC_GND = 8
 
+    # Encoder signals
+    current_angle_rad = 0.0
+
     def setup(self):
         """
         One-time method that sets up the robot, like in Arduino
@@ -55,6 +58,27 @@ class DriveMotorNode(ROS2Sketch):
         """Converts floating point speed (-1.0 to 1.0) to dir and pwm values"""
         speed = max(min(speed, 1), -1)
         return int(abs(speed * 255))
+
+    def count_to_rad(self, count)
+        """ Converts encoder counts to motor drive shaft angle in radians"""
+        gear_ratio = 50
+        counts_per_revolution = 64
+        angle_rad = 2*math.pi*count/(gear_ratio*counts_per_revolution)
+        return angle_rad
+
+    def stop_drive_motors(self):
+        """Turn off motors when exiting ROS"""
+        self.PWM.write(self.speed_to_dir_pwm(0.0))
+        self.INA1.write(False)
+        self.INB1.write(False)
+
+    def encoder_callback(self):
+        """
+        Gets the current angle from the encoder
+        Estimates the motor angular velocity
+        Publishes data to the encoder_read topic
+        """
+        self.current_angle_rad = self.count_to_rad(self.encoder_left.val)
 
     def drive_callback(self, msg):
         """Processes a new drive command and controls motors appropriately"""
