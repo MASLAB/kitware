@@ -23,7 +23,16 @@ class PIDNode(ROS2Sketch):
     ENC_GND = 9
 
     # reference signals
-    current_position = 0
+    current_position = 0.0
+    current_velocity = 0.0
+    last_position = 0.0
+    last_velocity = 0.0
+    
+    # PID signals
+    proportional_term = 0.0
+    integral_term = 0.0
+    derivative_term = 0.0
+    control_effort = 0.0
     
     def setup(self):
         """
@@ -80,12 +89,15 @@ class PIDNode(ROS2Sketch):
         return max(min(control_effort, max_saturation), min_saturation)
 
     def encoder_callback(self):
+        self.current_position = self.convert_to_radians(self.encoder.val)
+
         encoder_msg = EncoderRead()
         encoder_msg.encoder_value = int(self.encoder.val)
-        encoder_msg.measured_angle_radians = self.convert_to_radians(self.encoder.val)
+        encoder_msg.measured_angle_radians = self.current_position
+        encoder_msg.estimated_angular_velocity = self.estimate_velocity(self.current_position)
 
         #self.get_logger().info('Encoder Count: {}'.format(self.encoder.val))
-        self.current_position = self.convert_to_radians(self.encoder.val)
+
         self.encoder_publisher.publish(encoder_msg)
 
     def brake(self):
@@ -105,24 +117,40 @@ class PIDNode(ROS2Sketch):
         # update encoder
         self.encoder_callback()
 
-        kp = 1
-        control_effort = self.saturate(kp*(msg.desired_position - self.current_position))
+        position_error = msg.desired_position - self.current_position
+        
+        # antiwindup
+        self.integral_term = self.saturate(self.integral_term + msg.ki*position_error)
+
+        # derivative requires care
+        self.derivative_term = (1-msg.alpha)*self.derivative_term + msg.alpha*msg.kd*(self.current_position - self.last_position)
+        self.last_position = self.current_position
+
+        self.control_effort = msg.kp*(self.proportional_term + self.integral_term + self.derivative_term)
+        self.control_effort = self.saturate(self.control_effort)
+
         #self.get_logger().info('Speed: {}'.format(control_effort))
         pid_output_msg = PIDOutput()
-        pid_output_msg.control_effort = float(control_effort)
+        pid_output_msg.control_effort = float(self.control_effort)
+        pid_output_msg.integral_term = float(self.integral_term)
+        pid_output_msg.derivative_term = float(self.derivative_term)
         self.pid_output_pub.publish(pid_output_msg)
 
-        if control_effort > 0: # forward
+        if self.control_effort > 0: # forward
             self.INA.write(False)
             self.INB.write(True)
         else: # reverse
             self.INA.write(True)
             self.INB.write(False)
             
-        self.PWM.write(self.speed_to_dir_pwm(control_effort))
+        self.PWM.write(self.speed_to_dir_pwm(self.control_effort))
 
     def estimate_velocity(self, position):
-        pass
+        alpha = 1
+        sample_rate = 1000
+        velocity = (1-alpha)*self.last_velocity + alpha*(position - self.last_position)*sample_rate
+        self.last_velocity = velocity
+        return velocity
 
     def convert_to_radians(self, counts):
         CPR = 64 # counts per revolution

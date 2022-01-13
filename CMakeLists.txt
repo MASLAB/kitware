@@ -55,7 +55,6 @@ install(PROGRAMS
   kitware/kbd_driver.py
   kitware/kitbot.py
   kitware/pid.py
-  kitware/encoder.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

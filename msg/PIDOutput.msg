@@ -1,1 +1,3 @@
 float32 control_effort
+float32 integral_term
+float32 derivative_term
