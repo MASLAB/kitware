@@ -1,0 +1,3 @@
+int32 encoder_value
+float32 measured_angle_radians
+float32 estimated_angular_velocity

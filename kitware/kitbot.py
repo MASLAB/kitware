@@ -15,11 +15,11 @@ class KitBotNode(ROS2Sketch):
     # Pin mappings
     # LMOTOR_PINS = (2, 3, 4)  # INA1, INB1, PWM1
     INA1_PIN = 2
-    INB1_PIN = 3
-    PWM1_PIN = 4
+    INB1_PIN = 4
+    PWM1_PIN = 6
     # RMOTOR_PINS = (5, 6, 7)  # INA2, INB2, PWM2
-    INA2_PIN = 5
-    INB2_PIN = 6
+    INA2_PIN = 3
+    INB2_PIN = 5
     PWM2_PIN = 7
 
     def setup(self):
