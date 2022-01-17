@@ -29,6 +29,8 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
     msg/DriveCmd.msg
     msg/EncoderRead.msg
+    msg/DrivePIDCmd.msg
+    msg/PIDOutput.msg
 )
 
 #==========================================================#

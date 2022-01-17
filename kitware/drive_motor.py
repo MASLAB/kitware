@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rclpy
-from kitware.msg import DriveCmd, EncoderRead
+from kitware.msg import DrivePIDCmd, EncoderRead, PIDOutput
 from tamproxy import ROS2Sketch
 from tamproxy.devices import DigitalOutput, AnalogOutput, Encoder
 import math
@@ -14,18 +14,22 @@ class DriveMotorNode(ROS2Sketch):
 
     # Pin mappings
     # LMOTOR_PINS = (2, 3, 4)  # INA1, INB1, PWM1
-    INA1_PIN = 2
-    INB1_PIN = 3
-    PWM1_PIN = 4
+    INA1_PIN = 3
+    INB1_PIN = 4
+    PWM1_PIN = 5
 
     # Encoder Pin Mappings
     # JOHNZ: change to actual pins before running
-    ENC_PINS = 5, 6
-    ENC_VCC = 7
-    ENC_GND = 8
+    ENC_PINS = 7, 6
+    ENC_VCC = 8
+    ENC_GND = 9
 
     # Encoder signals
     current_angle_rad = 0.0
+
+    # PID signals
+    error = 0.0
+    control_effort = 0.0
 
     def setup(self):
         """
@@ -33,17 +37,29 @@ class DriveMotorNode(ROS2Sketch):
         Code is run when run_setup() method is called
         """
         # Create a subscriber to listen for drive motor commands
-        self.drive_sub = self.create_subscription(
-            DriveCmd,
-            'drive_cmd',
-            self.drive_callback,
+        self.drive_pid_sub = self.create_subscription(
+            DrivePIDCmd,
+            'drive_pid_cmd',
+            self.drive_pid_callback,
             10)
-        self.drive_sub  # prevent unused variable warning
+        self.drive_pid_sub  # prevent unused variable warning
 
         # Create a publisher to publish encoder data
         self.encoder_pub = self.create_publisher(
             EncoderRead, # message interface
             'encoder_read', # topic name
+            10) # queue length
+
+        # Create a publisher to publish PID output data
+        self.pid_output_pub = self.create_publisher(
+            PIDOutput, # message interface
+            'pid_output', # topic name
+            10) # queue length
+
+        # Create a publisher to publish Drive PID command data
+        self.drive_pid_cmd_pub = self.create_publisher(
+            DrivePIDCmd, # message interface
+            'drive_pid_cmd', # topic name
             10) # queue length
 
         # create pin objects
@@ -92,32 +108,52 @@ class DriveMotorNode(ROS2Sketch):
         Publish data to the encoder_read topic
         """
         self.current_angle_rad = self.count_to_rad(self.encoder_left.val)
+        self.current_angular_velocity = self.estimate_angular_velocity(self.current_angle_rad)
 
         # populate message
         encoder_msg = EncoderRead()
-        encoder_msg.left_encoder_count = int(self.encoder.val)
         encoder_msg.left_measured_angle_rad = self.current_angle_rad
-        encoder_msg.left_estimated_angular_velocity = self.estimate_angular_velocity(self.current_angle_rad)
+        encoder_msg.left_estimated_angular_velocity = self.current_angular_velocity
 
         # publish message
         self.encoder_pub.publish(encoder_msg)
 
-    def drive_callback(self, msg):
+    def clamp(self, val):
+        max_lim = 1.0
+        min_lim = -1.0
+        return max(min(val, max_lim), min_lim)
+
+    def drive_pid_callback(self, msg):
         """Processes a new drive command and controls motors appropriately"""
         # logic for direction
         # INAx: L INBx: L   Brake
         # INAx: L INBx: H   Rotate Forward
         # INAx: L INBx: H   Rotate Reverse
         # INAx: H INBx: H   Free Wheel
+        
+        # update the encoder reading
+        self.encoder_callback()
 
-        if msg.l_speed > 0: # forward
+        # compute proportional term
+        self.angle_error = msg.desired_angle_rad - self.current_angle_rad
+        self.control_effort = msg.kp*self.angle_error
+        
+        # saturate control effort
+        self.control_effort = self.clamp(self.control_effort)
+
+        # publish the control effort
+        pid_output_msg = PIDOutput()
+        pid_output_msg.control_effort = float(self.control_effort)
+        self.pid_output_pub.publish(pid_output_msg)
+
+        if self.control_effort > 0: # forward
             self.INA1.write(False)
             self.INB1.write(True)
         else: # reverse
             self.INA1.write(True)
             self.INB1.write(False)
 
-        self.PWM1.write(self.speed_to_dir_pwm(msg.l_speed)) # left motor
+        self.PWM1.write(self.speed_to_dir_pwm(self.control_effort)) # left motor
 
 if __name__ == '__main__':
     rclpy.init()
