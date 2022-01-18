@@ -26,10 +26,20 @@ class DriveMotorNode(ROS2Sketch):
 
     # Encoder signals
     current_angle_rad = 0.0
+    current_angular_velocity = 0.0
+    last_angle_rad = 0.0
+
+    # estimated angle
+    estimated_angle = 0.0
+    estimated_angular_velocity = 0.0
+    last_estimated_angle_error = 0.0
 
     # PID signals
     error = 0.0
     control_effort = 0.0
+    
+    # loop rate
+    Ts = 1.0/100.0 # [s]
 
     def setup(self):
         """
@@ -96,24 +106,43 @@ class DriveMotorNode(ROS2Sketch):
         self.INB1.write(False)
         self.get_logger().info('Halt! Stopping the motors!')
 
-    def estimate_angular_velocity(self, current_angle_rad):
+    def estimate_angular_velocity(self, current_angle_rad, alpha):
         """Estimates the angular velocity given the current angle"""
-        # JOHNZ: Implement!
-        return 0.0
+        # Simple Derivative Estimator
+        raw_angular_velocity = (self.current_angle_rad - self.last_angle_rad)/self.Ts
+        self.current_angular_velocity = alpha*self.current_angular_velocity + (1-alpha)*raw_angular_velocity
+        return self.current_angular_velocity
 
-    def encoder_callback(self):
+    def better_estimate_angular_velocity(self, current_angle_rad, kp, Ti):
+        estimated_angle_error = current_angle_rad - self.estimated_angle
+
+        # PI tracker
+        self.estimated_angular_velocity = self.estimated_angular_velocity + kp*((1 + self.Ts/Ti)*estimated_angle_error-self.last_estimated_angle_error)
+
+        # update estimated position
+        self.estimated_angle = self.estimated_angle + self.Ts*self.estimated_angular_velocity
+        self.last_estimated_angle_error = estimated_angle_error
+
+        return self.estimated_angular_velocity
+
+    def encoder_callback(self, msg):
         """
         Get the current angle from the encoder
         Estimate the motor angular velocity
         Publish data to the encoder_read topic
         """
+        # read current angle
         self.current_angle_rad = self.count_to_rad(self.encoder_left.val)
-        self.current_angular_velocity = self.estimate_angular_velocity(self.current_angle_rad)
-
+        
         # populate message
         encoder_msg = EncoderRead()
         encoder_msg.left_measured_angle_rad = self.current_angle_rad
         encoder_msg.left_estimated_angular_velocity = self.current_angular_velocity
+
+        # compute angular velocity estimate
+        encoder_msg.left_estimated_angular_velocity = self.estimate_angular_velocity(self.current_angle_rad, msg.alpha)
+        encoder_msg.better_velocity_estimate = self.better_estimate_angular_velocity(self.current_angle_rad, msg.kp_tracking, msg.ti_tracking)
+        encoder_msg.estimated_angle = self.estimated_angle
 
         # publish message
         self.encoder_pub.publish(encoder_msg)
@@ -131,15 +160,20 @@ class DriveMotorNode(ROS2Sketch):
         # INAx: L INBx: H   Rotate Reverse
         # INAx: H INBx: H   Free Wheel
         
+        #super().get_logger().info('Rate: {}'.format(self.get_clock().period()))
+
         # update the encoder reading
-        self.encoder_callback()
+        self.encoder_callback(msg)
 
         # compute proportional term
         self.angle_error = msg.desired_angle_rad - self.current_angle_rad
-        self.control_effort = msg.kp*self.angle_error
+        self.control_effort = msg.kp*self.angle_error + msg.feedforward
         
         # saturate control effort
         self.control_effort = self.clamp(self.control_effort)
+
+        # update angle and velocity measurements
+        self.last_angle_rad = self.current_angle_rad
 
         # publish the control effort
         pid_output_msg = PIDOutput()

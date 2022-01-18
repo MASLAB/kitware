@@ -1,2 +1,7 @@
 float32 kp
 float32 desired_angle_rad
+float32 desired_angular_velocity
+float32 alpha
+float32 feedforward
+float32 kp_tracking
+float32 ti_tracking
