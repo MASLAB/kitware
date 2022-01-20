@@ -39,7 +39,7 @@ class DriveMotorNode(ROS2Sketch):
     control_effort = 0.0
     
     # loop rate
-    Ts = 1.0/100.0 # [s]
+    Ts = 1.0/15.0 # [s]
 
     def setup(self):
         """
@@ -157,10 +157,10 @@ class DriveMotorNode(ROS2Sketch):
         # logic for direction
         # INAx: L INBx: L   Brake
         # INAx: L INBx: H   Rotate Forward
-        # INAx: L INBx: H   Rotate Reverse
+        # INAx: H INBx: L   Rotate Reverse
         # INAx: H INBx: H   Free Wheel
         
-        #super().get_logger().info('Rate: {}'.format(self.get_clock().period()))
+        #super().get_logger().info('Rate: {}'.format(self.get_clock().now()))
 
         # update the encoder reading
         self.encoder_callback(msg)
