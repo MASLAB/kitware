@@ -1,4 +1,1 @@
 float32 left_measured_angle_rad
-float32 left_estimated_angular_velocity
-float32 better_velocity_estimate
-float32 estimated_angle

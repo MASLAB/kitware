@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 import rclpy
-from kitware.msg import DrivePIDCmd, EncoderRead, PIDOutput
+from kitware.msg import DrivePIDCmd, EncoderRead
 from tamproxy import ROS2Sketch
-from tamproxy.devices import DigitalOutput, AnalogOutput, Encoder
+from tamproxy.devices import DigitalOutput, FeedbackMotor
 import math
 
 class DriveMotorNode(ROS2Sketch):
     """ROS2 Node that controls the KitBot via the Teensy and tamproxy"""
     # new dual channel DC motor controller
     # https://wiki.dfrobot.com/Dual-Channel_DC_Motor_Driver-12A_SKU:DFR0601
-    # TODO: implement TAMProxy Motor object
 
     # Pin mappings
     # LMOTOR_PINS = (2, 3, 4)  # INA1, INB1, PWM1
@@ -24,23 +23,6 @@ class DriveMotorNode(ROS2Sketch):
     ENC_VCC = 8
     ENC_GND = 9
 
-    # Encoder signals
-    current_angle_rad = 0.0
-    current_angular_velocity = 0.0
-    last_angle_rad = 0.0
-
-    # estimated angle
-    estimated_angle = 0.0
-    estimated_angular_velocity = 0.0
-    last_estimated_angle_error = 0.0
-
-    # PID signals
-    error = 0.0
-    control_effort = 0.0
-    
-    # loop rate
-    Ts = 1.0/15.0 # [s]
-
     def setup(self):
         """
         One-time method that sets up the robot, like in Arduino
@@ -50,7 +32,7 @@ class DriveMotorNode(ROS2Sketch):
         self.drive_pid_sub = self.create_subscription(
             DrivePIDCmd,
             'drive_pid_cmd',
-            self.drive_pid_callback,
+            self.drive_callback,
             10)
         self.drive_pid_sub  # prevent unused variable warning
 
@@ -58,12 +40,6 @@ class DriveMotorNode(ROS2Sketch):
         self.encoder_pub = self.create_publisher(
             EncoderRead, # message interface
             'encoder_read', # topic name
-            10) # queue length
-
-        # Create a publisher to publish PID output data
-        self.pid_output_pub = self.create_publisher(
-            PIDOutput, # message interface
-            'pid_output', # topic name
             10) # queue length
 
         # Create a publisher to publish Drive PID command data
@@ -74,22 +50,16 @@ class DriveMotorNode(ROS2Sketch):
 
         # create pin objects
         # left motor
-        self.INA1 = DigitalOutput(self.tamp, self.INA1_PIN)
-        self.INB1 = DigitalOutput(self.tamp, self.INB1_PIN)
-        self.PWM1 = AnalogOutput(self.tamp, self.PWM1_PIN)
-
-        # encoder: takes channel A and B gives you count [int32]
-        self.encoder_left = Encoder(self.tamp, *self.ENC_PINS, continuous=True)
+        self.motor = FeedbackMotor(self.tamp, self.INA1_PIN, self.INB1_PIN, self.PWM1_PIN, *self.ENC_PINS)
         # trick to get encoder pins in line for 3.3 V and Gnd
         self.encoder_left_power = DigitalOutput(self.tamp, self.ENC_VCC)
         self.encoder_left_ground = DigitalOutput(self.tamp, self.ENC_GND)
         self.encoder_left_power.write(True) # 3.3 V
         self.encoder_left_ground.write(False) # Gnd
 
-    def speed_to_dir_pwm(self, speed):
-        """Converts floating point speed (-1.0 to 1.0) to dir and pwm values"""
-        speed = max(min(speed, 1), -1)
-        return int(abs(speed * 255))
+    def convert_to_angle_cmd(self, angle):
+        # factor of 4 due to signed 8 bit int
+        return math.pi/180*angle/(4*math.pi)*255
 
     def count_to_rad(self, count):
         """ Converts encoder counts to motor drive shaft angle in radians"""
@@ -100,30 +70,7 @@ class DriveMotorNode(ROS2Sketch):
 
     def stop_drive_motors(self):
         """Turn off motors when exiting ROS"""
-        # JOHNZ: Add other actuators and motors
-        self.PWM1.write(self.speed_to_dir_pwm(0.0))
-        self.INA1.write(False)
-        self.INB1.write(False)
         self.get_logger().info('Halt! Stopping the motors!')
-
-    def estimate_angular_velocity(self, current_angle_rad, alpha):
-        """Estimates the angular velocity given the current angle"""
-        # Simple Derivative Estimator
-        raw_angular_velocity = (self.current_angle_rad - self.last_angle_rad)/self.Ts
-        self.current_angular_velocity = alpha*self.current_angular_velocity + (1-alpha)*raw_angular_velocity
-        return self.current_angular_velocity
-
-    def better_estimate_angular_velocity(self, current_angle_rad, kp, Ti):
-        estimated_angle_error = current_angle_rad - self.estimated_angle
-
-        # PI tracker
-        self.estimated_angular_velocity = self.estimated_angular_velocity + kp*((1 + self.Ts/Ti)*estimated_angle_error-self.last_estimated_angle_error)
-
-        # update estimated position
-        self.estimated_angle = self.estimated_angle + self.Ts*self.estimated_angular_velocity
-        self.last_estimated_angle_error = estimated_angle_error
-
-        return self.estimated_angular_velocity
 
     def encoder_callback(self, msg):
         """
@@ -132,62 +79,22 @@ class DriveMotorNode(ROS2Sketch):
         Publish data to the encoder_read topic
         """
         # read current angle
-        self.current_angle_rad = self.count_to_rad(self.encoder_left.val)
+        self.current_angle_rad = self.count_to_rad(self.motor.enc_count)
         
         # populate message
         encoder_msg = EncoderRead()
-        encoder_msg.left_measured_angle_rad = self.current_angle_rad
-        encoder_msg.left_estimated_angular_velocity = self.current_angular_velocity
-
-        # compute angular velocity estimate
-        encoder_msg.left_estimated_angular_velocity = self.estimate_angular_velocity(self.current_angle_rad, msg.alpha)
-        encoder_msg.better_velocity_estimate = self.better_estimate_angular_velocity(self.current_angle_rad, msg.kp_tracking, msg.ti_tracking)
-        encoder_msg.estimated_angle = self.estimated_angle
+        encoder_msg.left_measured_angle_rad = 180/math.pi*self.current_angle_rad
 
         # publish message
         self.encoder_pub.publish(encoder_msg)
 
-    def clamp(self, val):
-        max_lim = 1.0
-        min_lim = -1.0
-        return max(min(val, max_lim), min_lim)
-
-    def drive_pid_callback(self, msg):
+    def drive_callback(self, msg):
         """Processes a new drive command and controls motors appropriately"""
-        # logic for direction
-        # INAx: L INBx: L   Brake
-        # INAx: L INBx: H   Rotate Forward
-        # INAx: H INBx: L   Rotate Reverse
-        # INAx: H INBx: H   Free Wheel
-        
         #super().get_logger().info('Rate: {}'.format(self.get_clock().now()))
 
         # update the encoder reading
         self.encoder_callback(msg)
-
-        # compute proportional term
-        self.angle_error = msg.desired_angle_rad - self.current_angle_rad
-        self.control_effort = msg.kp*self.angle_error + msg.feedforward
-        
-        # saturate control effort
-        self.control_effort = self.clamp(self.control_effort)
-
-        # update angle and velocity measurements
-        self.last_angle_rad = self.current_angle_rad
-
-        # publish the control effort
-        pid_output_msg = PIDOutput()
-        pid_output_msg.control_effort = float(self.control_effort)
-        self.pid_output_pub.publish(pid_output_msg)
-
-        if self.control_effort > 0: # forward
-            self.INA1.write(False)
-            self.INB1.write(True)
-        else: # reverse
-            self.INA1.write(True)
-            self.INB1.write(False)
-
-        self.PWM1.write(self.speed_to_dir_pwm(self.control_effort)) # left motor
+        self.motor.write(self.convert_to_angle_cmd(msg.desired_angle_deg))
 
 if __name__ == '__main__':
     rclpy.init()
