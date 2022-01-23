@@ -1,1 +1,1 @@
-float32 left_measured_angle_rad
+float32 left_measured_angle_deg

@@ -46,13 +46,19 @@ class KitBotNode(ROS2Sketch):
         self.left_motor.write(*self.speed_to_dir_pwm(msg.l_speed))
         self.right_motor.write(*self.speed_to_dir_pwm(msg.r_speed))
 
+    def stop_drive_motors(self):
+        self.left_motor.write(*self.speed_to_dir_pwm(0.0))
+        self.right_motor.write(*self.speed_to_dir_pwm(0.0))
+
 if __name__ == '__main__':
     rclpy.init()
 
-    kb = KitBotNode(rate=100)  # Run at 100Hz (10ms loop)
-    kb.run_setup()     # Run tamproxy setup and code in setup() method
-    rclpy.spin(kb)
-
-    kb.destroy()       # Shuts down tamproxy
-    kb.destroy_node()  # Destroys the ROS node
-    rclpy.shutdown()
+    try:
+        kb = DriveMotorNode(rate=100)  # Run at 100Hz (10ms loop)
+        kb.run_setup()     # Run tamproxy setup and code in setup() method
+        rclpy.spin(kb)
+    except KeyboardInterrupt:
+        kb.stop_drive_motors()
+        kb.destroy()       # Shuts down tamproxy
+        kb.destroy_node()  # Destroys the ROS node
+        rclpy.shutdown()
