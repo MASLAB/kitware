@@ -5,8 +5,6 @@ from kitware.msg import DrivePIDCmd, EncoderRead
 from tamproxy import ROS2Sketch
 from tamproxy.devices import DigitalOutput, FeedbackMotor
 import math
-import struct
-import ctypes
 
 class DriveMotorNode(ROS2Sketch):
     """ROS2 Node that controls the KitBot via the Teensy and tamproxy"""

@@ -31,6 +31,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     msg/EncoderRead.msg
     msg/DrivePIDCmd.msg
     msg/PIDOutput.msg
+    msg/VisionDriveCmd.msg
 )
 
 #==========================================================#
@@ -55,6 +56,8 @@ install(PROGRAMS
   kitware/kbd_driver.py
   kitware/kitbot.py
   kitware/drive_motor.py
+  kitware/vision.py
+  kitware/visionbot.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
