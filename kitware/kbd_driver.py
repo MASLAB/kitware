@@ -43,7 +43,7 @@ def pygame_setup():
 def calculate_drive_speed(screen, surface):
     # Calculate new drive speeds and GUI coordinates from keypresses
     drive_speed = 0, 0
-    servo_position = 10
+    servo_position = 0
     box_pos = PADDING + BOX_SIZE, PADDING + BOX_SIZE
     pressed = pygame.key.get_pressed()
     show_dir = False
@@ -59,7 +59,7 @@ def calculate_drive_speed(screen, surface):
     # check if servo key is pressed
     for keycode in [pygame.K_UP]:
         if pressed[keycode]:
-            servo_position = 150
+            servo_position = 180
 
     # Update the GUI
     surface.fill(BG_COLOR)
