@@ -21,6 +21,7 @@ KEY_SPEEDS = {
     pygame.K_s: (-0.60, -0.60),
     pygame.K_d: (0.40, -0.40)
 }
+
 BOX_OFFSETS = {
     pygame.K_w: (0, -1),
     pygame.K_a: (-1, 0),
@@ -42,9 +43,11 @@ def pygame_setup():
 def calculate_drive_speed(screen, surface):
     # Calculate new drive speeds and GUI coordinates from keypresses
     drive_speed = 0, 0
+    servo_position = 10
     box_pos = PADDING + BOX_SIZE, PADDING + BOX_SIZE
     pressed = pygame.key.get_pressed()
     show_dir = False
+    # check if drive keys are pressed
     for keycode in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
         if pressed[keycode]:
             drive_speed = (drive_speed[0] + KEY_SPEEDS[keycode][0],
@@ -52,6 +55,11 @@ def calculate_drive_speed(screen, surface):
             box_pos = (box_pos[0] + BOX_OFFSETS[keycode][0] * BOX_SIZE,
                        box_pos[1] + BOX_OFFSETS[keycode][1] * BOX_SIZE)
             show_dir = True
+
+    # check if servo key is pressed
+    for keycode in [pygame.K_UP]:
+        if pressed[keycode]:
+            servo_position = 150
 
     # Update the GUI
     surface.fill(BG_COLOR)
@@ -68,7 +76,7 @@ def calculate_drive_speed(screen, surface):
             pygame.quit()
             sys.exit()
 
-    return drive_speed
+    return drive_speed, servo_position
 
 
 class KeyboardDriverNode(Node):
@@ -83,10 +91,11 @@ class KeyboardDriverNode(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
-        drive_speed = calculate_drive_speed(self.screen, self.surface)
+        drive_speed, servo_position = calculate_drive_speed(self.screen, self.surface)
         drive_cmd_msg = DriveCmd()
         drive_cmd_msg.l_speed = float(drive_speed[0])
         drive_cmd_msg.r_speed = float(drive_speed[1])
+        drive_cmd_msg.servo_pos = float(servo_position)
         self.drive_command_publisher.publish(drive_cmd_msg)
 
 
