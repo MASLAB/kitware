@@ -64,6 +64,14 @@ class VisionNode(Node):
             # Get a bounding rectangle around that contour
             x,y,w,h = cv2.boundingRect(c)
 
+            (ex,why),radius = cv2.minEnclosingCircle(c)
+            center = (int(ex),int(why))
+            radius = int(radius)
+            cv2.circle(frame,center,radius,(0,255,0),2)
+            # check if ball in position
+            if ex < 200+40 and ex > 200-40 and why < 200+17 and why > 200-17 and radius > 10 and radius < 40:
+                self.get_logger().info('ball in position')
+
             # Draw the rectangle on our frame
             cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
             
@@ -74,6 +82,9 @@ class VisionNode(Node):
             vision_drive_cmd_msg.x = float(x)
             vision_drive_cmd_msg.y = float(y)
             self.drive_command_publisher.publish(vision_drive_cmd_msg)
+
+        # Draw goal for ball picker
+        cv2.ellipse(frame,(200,200), (80,35), 0, 0, 360, (255,255,255), 2)
 
         # Display that frame (resized to be smaller for convenience)
         cv2.imshow('frame', frame)
