@@ -15,7 +15,7 @@ RATE = 10
 PADDING = 32
 BOX_SIZE = 64
 SCREEN_SIZE = BOX_SIZE * 3 + PADDING * 2
-KEY_SPEEDS = {
+MAX_KEY_SPEEDS = {
     pygame.K_w: (0.60, 0.60),
     pygame.K_a: (-0.40, 0.40),
     pygame.K_s: (-0.60, -0.60),
@@ -29,7 +29,14 @@ BOX_OFFSETS = {
 }
 BG_COLOR = (255, 255, 255)
 BOX_COLOR = (0, 0, 0)
-
+MAX_SPEED = 60
+KEY_ACCEL = {
+    pygame.K_w: (0.10, 0.10),
+    pygame.K_a: (-0.10, 0.10),
+    pygame.K_s: (-0.10, -0.10),
+    pygame.K_d: (0.10, -0.10)
+}
+MAX_DECEL = 0.1
 
 def pygame_setup():
     # Setup the GUI
@@ -39,19 +46,29 @@ def pygame_setup():
     surface = pygame.Surface(screen.get_size()).convert()
     return screen, surface
 
-def calculate_drive_speed(screen, surface):
+def calculate_drive_speed(screen, surface, current_speed):
     # Calculate new drive speeds and GUI coordinates from keypresses
-    drive_speed = 0, 0
+    #drive_speed = 0, 0
+    drive_speed = current_speed
     box_pos = PADDING + BOX_SIZE, PADDING + BOX_SIZE
     pressed = pygame.key.get_pressed()
     show_dir = False
+
     for keycode in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
         if pressed[keycode]:
-            drive_speed = (drive_speed[0] + KEY_SPEEDS[keycode][0],
-                           drive_speed[1] + KEY_SPEEDS[keycode][1])
+            # increment speed
+            drive_speed = (drive_speed[0] + KEY_ACCEL[keycode][0],
+                           drive_speed[1] + KEY_ACCEL[keycode][1])
             box_pos = (box_pos[0] + BOX_OFFSETS[keycode][0] * BOX_SIZE,
                        box_pos[1] + BOX_OFFSETS[keycode][1] * BOX_SIZE)
             show_dir = True
+            # check for max speed
+            if abs(drive_speed[0]) > abs(MAX_KEY_SPEEDS[keycode][0]) or abs(drive_speed[1]) > abs(MAX_KEY_SPEEDS[keycode][1]):
+                drive_speed = MAX_KEY_SPEEDS[keycode]
+ 
+    if not show_dir: # no key is pressed so we should decel to 0
+        drive_speed = (drive_speed[0] + -MAX_DECEL*drive_speed[0],
+                       drive_speed[1] + -MAX_DECEL*drive_speed[1])
 
     # Update the GUI
     surface.fill(BG_COLOR)
@@ -81,12 +98,13 @@ class KeyboardDriverNode(Node):
                 10)
         timer_period = 1.0 / RATE
         self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.drive_speed = 0, 0
 
     def timer_callback(self):
-        drive_speed = calculate_drive_speed(self.screen, self.surface)
+        self.drive_speed = calculate_drive_speed(self.screen, self.surface, self.drive_speed)
         drive_cmd_msg = DriveCmd()
-        drive_cmd_msg.l_speed = float(drive_speed[0])
-        drive_cmd_msg.r_speed = float(drive_speed[1])
+        drive_cmd_msg.l_speed = float(self.drive_speed[0])
+        drive_cmd_msg.r_speed = float(self.drive_speed[1])
         self.drive_command_publisher.publish(drive_cmd_msg)
 
 
