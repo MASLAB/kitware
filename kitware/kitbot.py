@@ -3,15 +3,12 @@
 import rclpy
 from kitware.msg import DriveCmd
 from tamproxy import ROS2Sketch
-from tamproxy.devices import DigitalOutput, AnalogOutput
-
+from tamproxy.devices import DigitalOutput, AnalogOutput, Servo
 
 class KitBotNode(ROS2Sketch):
     """ROS2 Node that controls the KitBot via the Teensy and tamproxy"""
     # new dual channel DC motor controller
     # https://wiki.dfrobot.com/Dual-Channel_DC_Motor_Driver-12A_SKU:DFR0601
-    # TODO: implement TAMProxy Motor object
-
     # Pin mappings
     # LMOTOR_PINS = (2, 3, 4)  # INA1, INB1, PWM1
     INA1_PIN = 2
@@ -21,6 +18,8 @@ class KitBotNode(ROS2Sketch):
     INA2_PIN = 3
     INB2_PIN = 5
     PWM2_PIN = 7
+    # SERVO_PIN
+    SERVO_PIN = 9
 
     def setup(self):
         """
@@ -44,6 +43,9 @@ class KitBotNode(ROS2Sketch):
         self.INA2 = DigitalOutput(self.tamp, self.INA2_PIN)
         self.INB2 = DigitalOutput(self.tamp, self.INB2_PIN)
         self.PWM2 = AnalogOutput(self.tamp, self.PWM2_PIN)
+        # servo
+        self.servo = Servo(self.tamp, self.SERVO_PIN)
+        self.servo.write(0)
 
     def speed_to_dir_pwm(self, speed):
         """Converts floating point speed (-1.0 to 1.0) to dir and pwm values"""
@@ -75,7 +77,8 @@ class KitBotNode(ROS2Sketch):
             self.INB2.write(False)
 
         self.PWM1.write(self.speed_to_dir_pwm(msg.l_speed)) # left motor
-        self.PWM2.write(self.speed_to_dir_pwm(msg.r_speed)) # right motor
+        self.PWM2.write(self.speed_to_dir_pwm(-msg.r_speed)) # right motor
+        self.servo.write(msg.servo_pos) # servo
 
 if __name__ == '__main__':
     rclpy.init()

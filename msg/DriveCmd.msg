@@ -1,2 +1,3 @@
 float32 l_speed
 float32 r_speed
+float32 servo_pos
