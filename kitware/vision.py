@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 from kitware.msg import VisionDriveCmd
+from sensor_msgs.msg import Image
 
 import rclpy
 from rclpy.node import Node
 
 import cv2
+from cv_bridge import CvBridge
 import numpy as np
 
 # Rate to check for frames
@@ -27,69 +29,82 @@ class VisionNode(Node):
                 VisionDriveCmd,
                 'vision_drive_cmd',
                 10)
+
+        # video stream
+        self.webcam_publisher = self.create_publisher(Image, 'webcam_frame', 10)
         timer_period = 1.0 / RATE
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
+        # used to convert between ROS2 and OpenCV images
+        self.br = CvBridge()
+
     def timer_callback(self):
-        # Capture a frame from the webcam
-        _, frame = self.cap.read()
+        try:
+            # Capture a frame from the webcam
+            ret, frame = self.cap.read()
 
-        # downsize frame
-        frame = cv2.resize(frame, (320, 240))
+            # downsize frame
+            frame = cv2.resize(frame, (320, 240))
 
-        # Min and max HSV thresholds for green
-        GREEN_THRESHOLD = ([70,50,50], [90,255,255])
+            # Min and max HSV thresholds for green
+            GREEN_THRESHOLD = ([70,50,50], [90,255,255])
 
-        # Convert BGR to HSV
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            # Convert BGR to HSV
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        # OpenCV needs bounds as numpy arrays
-        lower_bound = np.array(GREEN_THRESHOLD[0])
-        upper_bound = np.array(GREEN_THRESHOLD[1])
+            # OpenCV needs bounds as numpy arrays
+            lower_bound = np.array(GREEN_THRESHOLD[0])
+            upper_bound = np.array(GREEN_THRESHOLD[1])
 
-        # Threshold the HSV image to get only green color
-        # Mask contains a white on black image, where white pixels
-        # represent that a value was within our green threshold.
-        mask = cv2.inRange(hsv, lower_bound, upper_bound)
+            # Threshold the HSV image to get only green color
+            # Mask contains a white on black image, where white pixels
+            # represent that a value was within our green threshold.
+            mask = cv2.inRange(hsv, lower_bound, upper_bound)
 
-        # Find contours (distinct edges between two colors) in mask using OpenCV builtin
-        # This function returns 2 values, but we only care about the first
-        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            # Find contours (distinct edges between two colors) in mask using OpenCV builtin
+            # This function returns 2 values, but we only care about the first
+            contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        # If we have contours...
-        if len(contours) != 0:
-            # Find the biggest countour by area
-            c = max(contours, key = cv2.contourArea)
+            # If we have contours...
+            if len(contours) != 0:
+                # Find the biggest countour by area
+                c = max(contours, key = cv2.contourArea)
 
-            # Get a bounding rectangle around that contour
-            x,y,w,h = cv2.boundingRect(c)
+                # Get a bounding rectangle around that contour
+                x,y,w,h = cv2.boundingRect(c)
 
-            (ex,why),radius = cv2.minEnclosingCircle(c)
-            center = (int(ex),int(why))
-            radius = int(radius)
-            cv2.circle(frame,center,radius,(0,255,0),2)
-            # check if ball in position
-            if ex < 200+40 and ex > 200-40 and why < 200+17 and why > 200-17 and radius > 10 and radius < 40:
-                self.get_logger().info('ball in position')
+                (ex,why),radius = cv2.minEnclosingCircle(c)
+                center = (int(ex),int(why))
+                radius = int(radius)
+                cv2.circle(frame,center,radius,(0,255,0),2)
+                # check if ball in position
+                if ex < 200+40 and ex > 200-40 and why < 200+17 and why > 200-17 and radius > 10 and radius < 40:
+                    self.get_logger().info('ball in position')
 
-            # Draw the rectangle on our frame
-            cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
-            
-            # Display the message on the console
-            self.get_logger().info('Found a Green Ball at x: {} y: {}'.format(x, y))
+                # Draw the rectangle on our frame
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                
+                # Display the message on the console
+                self.get_logger().info('Found a Green Ball at x: {} y: {}'.format(x, y))
 
-            vision_drive_cmd_msg = VisionDriveCmd()
-            vision_drive_cmd_msg.x = float(x)
-            vision_drive_cmd_msg.y = float(y)
-            self.drive_command_publisher.publish(vision_drive_cmd_msg)
+                vision_drive_cmd_msg = VisionDriveCmd()
+                vision_drive_cmd_msg.x = float(x)
+                vision_drive_cmd_msg.y = float(y)
+                self.drive_command_publisher.publish(vision_drive_cmd_msg)
 
-        # Draw goal for ball picker
-        cv2.ellipse(frame,(200,200), (80,35), 0, 0, 360, (255,255,255), 2)
+            # Draw goal for ball picker
+            cv2.ellipse(frame,(200,200), (80,35), 0, 0, 360, (255,255,255), 2)
 
-        # Display that frame (resized to be smaller for convenience)
-        cv2.imshow('frame', frame)
+            if ret == True:
+                # publish the image
+                self.webcam_publisher.publish(self.br.cv2_to_imgmsg(frame))
 
-        cv2.waitKey(1)
+            # # Display that frame (resized to be smaller for convenience)
+            # cv2.imshow('frame', frame)
+
+            cv2.waitKey(1)
+        except Exception as e:
+            print(str(e))
 
 if __name__ == '__main__':
     rclpy.init()

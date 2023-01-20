@@ -58,6 +58,7 @@ install(PROGRAMS
   kitware/drive_motor.py
   kitware/vision.py
   kitware/visionbot.py
+  kitware/field_display.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

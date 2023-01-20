@@ -76,7 +76,7 @@ def calculate_drive_speed(screen, surface, current_speed):
     # check if servo key is pressed
     for keycode in [pygame.K_UP]:
         if pressed[keycode]:
-            servo_position = 180
+            servo_position = 120
 
     # Update the GUI
     surface.fill(BG_COLOR)
