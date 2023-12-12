@@ -38,7 +38,7 @@ class KitBotNode(ROS2Sketch):
     def drive_callback(self, msg):
         """Processes a new drive command and controls motors appropriately"""
         self.lmotor.write(*self.speed_to_dir_pwm(msg.l_speed))
-        self.rmotor.write(*self.speed_to_dir_pwm(msg.r_speed))
+        self.rmotor.write(*self.speed_to_dir_pwm(-msg.r_speed))
 
 if __name__ == '__main__':
     rclpy.init()
