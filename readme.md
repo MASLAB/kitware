@@ -1,6 +1,6 @@
 # Kitware
 
-ROS2 example code for the kitbot (MASLAB 2022)
+ROS2 example code for the kitbot (MASLAB 2024)
 
 * Controls 2 Kitbot drive motors with WASD keys
 * Visualize data with rqt perspective
