@@ -7,7 +7,8 @@ ROS2 example code for the kitbot (MASLAB 2022)
 
 ## Setup
 1. Clone into the `src` directory of your colcon workspace for ROS
-2. Run `colcon build` from the workspace folder
+2. Make sure you have cloned [kitware_interface](https://github.com/MASLAB/kitware_interface) in `src` as well
+3. Run `colcon build` from the workspace folder
 
 The following steps should already be done on the hardware we give students.
 1. Make sure you have the `pygame` package: `pip3 install pygame`
@@ -16,11 +17,11 @@ The following steps should already be done on the hardware we give students.
 
 ## Running
 
-Run `. install/local_setup.bash` to setup your environment to use the built packages
+Run `. install/setup.bash` to setup your environment to use the built packages
 
 ### Using rosrun
-* Launch the kitbot node: `ros2 run kitware kitbot.py`
-* Launch the keyboard driver node: `ros2 run kitware kbd_driver.py`
+* Launch the kitbot node: `ros2 run kitware kitbot`
+* Launch the keyboard driver node: `ros2 run kitware kbd_driver`
 
 ### Using roslaunch
 * `ros2 launch kitware kitware_launch.py`

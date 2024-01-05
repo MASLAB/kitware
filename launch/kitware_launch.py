@@ -5,12 +5,12 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='kitware',
-            executable='kitbot.py',
+            executable='kitbot',
             output='screen'
         ),
         Node(
             package='kitware',
-            executable='kbd_driver.py',
+            executable='kbd_driver',
             output='screen'
         ),
     ])
