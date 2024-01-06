@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rclpy
-from kitware.msg import DriveCmd
+from kitware_interface.msg import DriveCmd
 from tamproxy import ROS2Sketch
 from tamproxy.devices import AnalogInput, Motor
 
@@ -40,7 +40,7 @@ class KitBotNode(ROS2Sketch):
         self.lmotor.write(*self.speed_to_dir_pwm(msg.l_speed))
         self.rmotor.write(*self.speed_to_dir_pwm(-msg.r_speed))
 
-if __name__ == '__main__':
+def main():
     rclpy.init()
 
     kb = KitBotNode(rate=100)  # Run at 100Hz (10ms loop)
@@ -50,3 +50,6 @@ if __name__ == '__main__':
     kb.destroy()       # Shuts down tamproxy
     kb.destroy_node()  # Destroys the ROS node
     rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from kitware.msg import DriveCmd
+from kitware_interface.msg import DriveCmd
 
 import rclpy
 from rclpy.node import Node
@@ -89,8 +89,7 @@ class KeyboardDriverNode(Node):
         drive_cmd_msg.r_speed = float(drive_speed[1])
         self.drive_command_publisher.publish(drive_cmd_msg)
 
-
-if __name__ == '__main__':
+def main():
     rclpy.init()
     # Create an instance of KeyboardDriverNode
     keyboard_driver_node = KeyboardDriverNode()
@@ -99,3 +98,6 @@ if __name__ == '__main__':
     # Destroy the node!
     keyboard_driver_node.destroy_node()
     rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
